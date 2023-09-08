@@ -3,4 +3,3 @@
 - npm install
 
 - backend : npm start
-- front end : npm start
