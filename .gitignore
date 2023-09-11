@@ -1,7 +1,11 @@
+# Backend :
 # dependencies
 /backend/node_modules
 /backend/.env
 .DS_Store
 
+# Frontend : 
+# dependencies
+/frontend/node_modules
 
 

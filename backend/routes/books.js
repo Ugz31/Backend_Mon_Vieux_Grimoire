@@ -6,6 +6,7 @@ const fs = require('fs');
 const sharp = require('sharp');
 
 const model = require('../models/thing');
+const auth = require('../middleware/authentification');
 // utilisation d'express Js
 const bookRoutes = express();
 // Utilisation du middleware pour parser le corps de la requête en JSON
@@ -13,6 +14,7 @@ bookRoutes.use(express.json());
 
 const upload = multer();
 const jwt = require('jsonwebtoken');
+const { log } = require('console');
 
 // ------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------
@@ -63,7 +65,7 @@ bookRoutes.get('/api/books/:id', async (req, res) => {
 // ------------------------------------------------------------------------------
 
 // POST : Capture et enregistre l'image, analyse le livre transformé en chaîne de caractères, et l'enregistre dans la base de données en définissant correctement son ImageUrl.
-bookRoutes.post('/api/books', upload.single('image'), (req, res) => {
+bookRoutes.post('/api/books', auth, upload.single('image'), async (req, res) => {
   // Récupérez les données du livre et l'image
   const { title, author, year, genre, ratings, averageRating } = JSON.parse(req.body.book);
 
@@ -84,19 +86,20 @@ bookRoutes.post('/api/books', upload.single('image'), (req, res) => {
   const imageExtension = imageFile.originalname;
   const imageName = `${Date.now()}.${imageExtension}`;
 
-  fs.writeFileSync(`./images/${imageName}`, imageFile.buffer);
-
   // Compression de l'image (Green Code)
-  sharp(`./images/${imageName}`)
-    .resize(800, 600)
-    .toFile(`./images/compressed_${imageName}`, (err) => {
-      if (err) {
-        console.error("Erreur lors de la compression de l'image :", err);
-      } else {
-        console.log('Image compressée avec succès !');
-        fs.unlinkSync(`./images/${imageName}`);
-      }
-    });
+  function compressedPhoto() {
+    fs.writeFileSync(`./images/${imageName}`, imageFile.buffer);
+    sharp(`./images/${imageName}`)
+      .resize(800, 600)
+      .toFile(`./images/compressed_${imageName}`, (err) => {
+        if (err) {
+          console.error("Erreur lors de la compression de l'image :", err);
+        } else {
+          console.log('Image compressée avec succès !');
+          fs.unlinkSync(`./images/${imageName}`);
+        }
+      });
+  }
 
   const imageUrl = `${req.protocol}://${req.get('host')}/images/compressed_${imageName}`;
   const book = new model.Book({
@@ -109,18 +112,25 @@ bookRoutes.post('/api/books', upload.single('image'), (req, res) => {
     ratings,
     averageRating,
   });
-
   try {
-    const savedBook = book.save();
-    return res.status(200).json(savedBook);
+    await book.save().then((response) => {
+      compressedPhoto();
+      // Traitement des réponses réussies
+      return res.status(200).json(savedBook);
+    });
   } catch (error) {
-    return res.status(500).json({ error });
+    if (error.response && error.response.status === 500) {
+      // Remplacer le message d'erreur générique par votre propre message
+      error.message = 'Le serveur a rencontré une erreur. Veuillez réessayer plus tard.';
+    }
+
+    return res.status(500).json(error.message);
   }
 });
 
 // ------------------------------------------------------------------------------
 // POST : Définit la note pour le user ID fourni. La note doit être comprise entre 0 et 5. L'ID de l'utilisateur et la note doivent être ajoutés au tableau "rating" afin de ne pas laisser un utilisateur noter deux fois le même livre
-bookRoutes.post('/api/books/:id/rating', async (req, res) => {
+bookRoutes.post('/api/books/:id/rating', auth, async (req, res) => {
   const newRatings = req.body;
 
   const book = await model.Book.findOne({ _id: req.params.id });
@@ -144,7 +154,7 @@ bookRoutes.post('/api/books/:id/rating', async (req, res) => {
   book.ratings.forEach((rating) => {
     totalRating += rating.grade;
   });
-  book.averageRating = totalRating / book.ratings.length;
+  book.averageRating = (totalRating / book.ratings.length).toFixed(2);
 
   try {
     await book.save();
@@ -158,7 +168,7 @@ bookRoutes.post('/api/books/:id/rating', async (req, res) => {
 // ------------------------------------------------------------------------------
 
 // PUT : Met à jour le livre avec l'_id fourni
-bookRoutes.put('/api/books/:id', async (req, res) => {
+bookRoutes.put('/api/books/:id', auth, async (req, res) => {
   try {
     const updatedBook = await model.Book.findOneAndUpdate({ _id: req.params.id }, { $set: req.body }, { new: true });
     res.status(200).json(updatedBook);
@@ -171,7 +181,7 @@ bookRoutes.put('/api/books/:id', async (req, res) => {
 // ------------------------------------------------------------------------------
 
 // DELETE : Supprime le livre avec l'_id fourni ainsi que l’image associée.
-bookRoutes.delete('/api/books/:id', async (req, res) => {
+bookRoutes.delete('/api/books/:id', auth, async (req, res) => {
   try {
     const deleteBook = await model.Book.findOneAndDelete({ _id: req.params.id });
     const imageName = deleteBook.imageUrl.split('images/')[1];

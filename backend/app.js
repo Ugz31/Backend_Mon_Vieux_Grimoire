@@ -1,5 +1,5 @@
 const express = require('express');
-const path = require("path");
+const path = require('path');
 // utilisation d'express Js
 const app = express();
 const mongoose = require('mongoose');
@@ -26,8 +26,7 @@ app.use((req, res, next) => {
   next();
 });
 
-
-app.use("/images", express.static(path.join(__dirname, "images")));
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(bookRoutes);
 app.use(authRoutes);
 

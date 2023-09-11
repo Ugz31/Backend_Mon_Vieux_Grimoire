@@ -4,13 +4,18 @@ const model = require('../models/thing');
 const bcrypt = require('bcrypt');
 // Bearer Token
 const jwt = require('jsonwebtoken');
-
+const auth = require('../middleware/authentification');
 // utilisation d'express Js
 const authRoutes = express();
 
 // POST : Hachage mtp
 authRoutes.post('/api/auth/signup', async (req, res) => {
   const { email, password } = req.body;
+
+  // Gestion des emails valide
+  const EMAIL_REGEX =
+    /^(([^<>()[]\.,;:\s@"]+(.[^<>()[]\.,;:\s@"]+)*)|(".+"))@(([[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}])|(([a-zA-Z-0-9]+.)+[a-zA-Z]{2,}))$/;
+  if (!EMAIL_REGEX.test(req.body.email)) return res.status(400).json({ message: 'Email incorrect.' });
 
   //   Variable salt pour la sécurité + hachage
   const saltRounds = 10;

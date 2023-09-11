@@ -9,10 +9,32 @@ const userSchema = mongoose.Schema({
 
 const bookSchema = mongoose.Schema({
   userId: { type: String, required: true },
-  title: { type: String, required: true, unique: true },
-  author: { type: String, required: true },
+  title: {
+    type: String,
+    validate: {
+      validator: (value) => /^[A-Za-z\s]+$/.test(value),
+      message: 'Le formulaire doit contenir uniquement des lettres de A à Z.',
+    },
+    required: true,
+    unique: true,
+  },
+  author: {
+    type: String,
+    validate: {
+      validator: (value) => /^[A-Za-z\s]+$/.test(value),
+      message: 'Le formulaire doit contenir uniquement des lettres de A à Z.',
+    },
+    required: true,
+  },
   year: { type: Number, required: true },
-  genre: { type: String, required: true },
+  genre: {
+    type: String,
+    validate: {
+      validator: (value) => /^[A-Za-z\s]+$/.test(value),
+      message: 'Le formulaire doit contenir uniquement des lettres de A à Z.',
+    },
+    required: true,
+  },
   imageUrl: { type: String, required: true },
   ratings: [{ userId: { type: String }, grade: { type: Number, required: true } }],
   averageRating: { type: Number },
