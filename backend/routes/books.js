@@ -119,12 +119,7 @@ bookRoutes.post('/api/books', auth, upload.single('image'), async (req, res) => 
       return res.status(200).json(savedBook);
     });
   } catch (error) {
-    if (error.response && error.response.status === 500) {
-      // Remplacer le message d'erreur générique par votre propre message
-      error.message = 'Le serveur a rencontré une erreur. Veuillez réessayer plus tard.';
-    }
-
-    return res.status(500).json(error.message);
+    return res.status(404).json({ error: error });
   }
 });
 
